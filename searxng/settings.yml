@@ -1,0 +1,16 @@
+# SearXNG overrides for playnext. Everything not listed keeps its default.
+# The secret key comes from the SEARXNG_SECRET environment variable (see docker-compose.yml).
+
+use_default_settings: true
+
+server:
+  # Bot protection needs an extra Valkey database; not needed for a private
+  # localhost instance.
+  limiter: false
+  public_instance: false
+
+search:
+  # JSON is off by default, and requests for it get a 403 until it is listed here.
+  formats:
+    - html
+    - json

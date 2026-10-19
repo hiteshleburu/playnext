@@ -1,0 +1,22 @@
+# Local SearXNG instance for playnext's web_search tool.
+#
+#   docker compose up -d        start it   (http://localhost:8080)
+#   docker compose logs -f      watch the logs
+#   docker compose down         stop it
+#
+# Needs SEARXNG_SECRET in your .env file (compose reads .env automatically).
+# Generate one with:
+#   python -c "import secrets; print(secrets.token_hex(32))"
+
+services:
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: playnext-searxng
+    restart: unless-stopped
+    ports:
+      # Bound to localhost only, so nothing else on your network can reach it.
+      - "127.0.0.1:8080:8080"
+    environment:
+      - SEARXNG_SECRET=${SEARXNG_SECRET:?Set SEARXNG_SECRET in your .env file}
+    volumes:
+      - ./searxng:/etc/searxng
