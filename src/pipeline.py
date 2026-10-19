@@ -149,16 +149,26 @@ async def call(client, tool: str, **arguments):
     return result.structured_content
 
 
-async def resolve_liked(client, names: list):
-    """Map what the user typed to dataset games. Lenient: the user typed it on purpose."""
+def _name_and_weight(item):
+    """A liked entry is a title, or {"name": ..., "weight": ...}."""
+    if isinstance(item, dict):
+        return str(item["name"]), float(item.get("weight", 1.0))
+    return str(item), 1.0
+
+
+async def resolve_liked(client, items: list):
+    """Map what the user typed to dataset games. Lenient: the user typed it on purpose.
+    Items are titles or {"name", "weight"} dicts."""
     seeds, missing = [], []
-    for name in names:
+    for item in items:
+        name, weight = _name_and_weight(item)
         matches = (await call(client, "find_games", name=name, limit=5))["matches"]
         hit = resolve_title(name, matches) or (matches[0] if matches else None)
         if hit is None:
             missing.append(name)
         elif hit["app_id"] not in {s["app_id"] for s in seeds}:
-            seeds.append({"input": name, "app_id": hit["app_id"], "name": hit["name"]})
+            seeds.append({"input": name, "app_id": hit["app_id"], "name": hit["name"],
+                          "weight": weight})
     return seeds, missing
 
 
@@ -207,18 +217,18 @@ async def web_candidates(client, llm: LLM, seed: dict, *, results_per_query: int
 # The pipeline
 # ---------------------------------------------------------------------------
 
-async def run_pipeline(client, llm: LLM, liked_names: list, *, k: int = 10, options: dict | None = None,
+async def run_pipeline(client, llm: LLM, liked: list, *, k: int = 10, options: dict | None = None,
                        use_web: bool = True, results_per_query: int = 5, log=lambda message: None) -> dict:
-    """Recommend games for the liked titles.
+    """Recommend games for the liked titles (strings, or {"name", "weight"} dicts).
 
     options   extra arguments for the `recommend` tool: max_price, platforms,
               categories_any, tags_any, exclude_tags, max_playtime_hours,
               min_release_year, allow_vr_only, tag_boosts, owned_app_ids, wishlist_app_ids.
     """
     warnings = []
-    seeds, missing = await resolve_liked(client, liked_names)
+    seeds, missing = await resolve_liked(client, liked)
     if not seeds:
-        raise PipelineError(f"None of the liked games were found in the dataset: {liked_names}")
+        raise PipelineError(f"None of the liked games were found in the dataset: {liked}")
     for name in missing:
         warnings.append(f"Liked game not found in the dataset: {name!r}")
     seed_ids = {s["app_id"] for s in seeds}
@@ -253,7 +263,7 @@ async def run_pipeline(client, llm: LLM, liked_names: list, *, k: int = 10, opti
                   for app_id, count in mentions.most_common(MAX_CANDIDATES)]
     if candidates:
         arguments["candidates"] = candidates
-    result = await call(client, "recommend", liked=[s["app_id"] for s in seeds], k=k, **arguments)
+    result = await call(client, "recommend", liked=[{"app_id": s["app_id"], "weight": s["weight"]} for s in seeds], k=k, **arguments)
     return {
         "recommendations": result["recommendations"],
         "seeds": seeds,
@@ -262,11 +272,25 @@ async def run_pipeline(client, llm: LLM, liked_names: list, *, k: int = 10, opti
     }
 
 
-async def recommend_games(target, llm: LLM, liked_names: list, **kwargs) -> dict:
-    """Connect to the playnext MCP server and run the pipeline.
+def server_target(data_path, server_url=None):
+    """What an MCP client connects to: a running server's URL, or a subprocess running
+    mcp_server.py over stdio."""
+    from mcp import StdioServerParameters
 
-    target   a server URL, `StdioServerParameters` for a subprocess, or (in tests) an
-             in-process MCPServer. Keyword arguments go to `run_pipeline`.
+    if server_url:
+        return server_url
+    server = Path(__file__).resolve().parent / "mcp_server.py"
+    # The MCP client hands a child process only a small safe set of environment
+    # variables, so the ones this project reads have to be passed on explicitly.
+    env = {name: os.environ[name] for name in SERVER_ENV_VARS if name in os.environ}
+    return StdioServerParameters(
+        command=sys.executable, args=[str(server), "--data", str(data_path)], env=env or None)
+
+
+async def with_client(target, work):
+    """Connect to the playnext MCP server and `await work(client)`.
+
+    target   a server URL, `StdioServerParameters`, or (in tests) an in-process MCPServer.
 
     Errors raised inside the connection come out wrapped in an ExceptionGroup by the
     MCP client; this unwraps them so callers can catch PipelineError / LLMError.
@@ -275,12 +299,17 @@ async def recommend_games(target, llm: LLM, liked_names: list, **kwargs) -> dict
 
     try:
         async with Client(target) as client:
-            return await run_pipeline(client, llm, liked_names, **kwargs)
+            return await work(client)
     except BaseExceptionGroup as group:
         error = group
         while isinstance(error, BaseExceptionGroup) and error.exceptions:
             error = error.exceptions[0]
         raise error from None
+
+
+async def recommend_games(target, llm: LLM, liked: list, **kwargs) -> dict:
+    """Connect to the playnext MCP server and run the pipeline (kwargs go to run_pipeline)."""
+    return await with_client(target, lambda client: run_pipeline(client, llm, liked, **kwargs))
 
 
 # ---------------------------------------------------------------------------
@@ -305,17 +334,7 @@ def _print_report(report: dict) -> None:
 
 
 async def _main(args) -> None:
-    from mcp import StdioServerParameters
-
-    if args.server_url:
-        target = args.server_url
-    else:
-        server = Path(__file__).resolve().parent / "mcp_server.py"
-        # The MCP client hands a child process only a small safe set of environment
-        # variables, so the ones this project reads have to be passed on explicitly.
-        env = {name: os.environ[name] for name in SERVER_ENV_VARS if name in os.environ}
-        target = StdioServerParameters(
-            command=sys.executable, args=[str(server), "--data", str(args.data)], env=env or None)
+    target = server_target(args.data, args.server_url)
     options = {}
     if args.max_price is not None:
         options["max_price"] = args.max_price
@@ -335,7 +354,7 @@ async def _main(args) -> None:
 
 
 def main() -> None:
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")   # game names, and Windows pipes
     parser = argparse.ArgumentParser(description="Recommend games using web search + the engine.")
     parser.add_argument("--like", nargs="+", required=True, help="game names you like")
     parser.add_argument("--k", type=int, default=10)

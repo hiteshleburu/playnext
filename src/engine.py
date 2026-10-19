@@ -89,7 +89,7 @@ class EngineConfig:
     # Re-ranking.
     mmr_lambda: float = 0.7           # 1.0 = pure relevance, lower = more diversity
     max_per_developer: int = 2
-    max_per_franchise: int = 2
+    max_per_franchise: int = 1
     seed_balance: float = 0.2         # nudge toward giving every liked game its share
 
     # Games suggested from outside (e.g. found on the web): extra score for a game
@@ -222,6 +222,7 @@ class Engine:
         self._categories = g["categories"].tolist()
         self._tags = g["tags"].tolist()
         self._tag_aliases = None    # lowercase tag -> real spellings; built on first use
+        self._tag_counts = None     # tag -> number of games with it; built with the aliases
 
         if "n_reviews" in g:
             self._n_reviews = g["n_reviews"].to_numpy(dtype=np.int64)
@@ -582,13 +583,31 @@ class Engine:
     def _resolve_tags(self, names) -> list:
         """Map case-insensitive tag names to the spellings used in the data, so
         each game needs a couple of dict lookups instead of lowercasing every tag."""
-        if self._tag_aliases is None:
-            aliases = {}
-            for votes in self._tags:
-                for tag in votes:
-                    aliases.setdefault(tag.lower(), set()).add(tag)
-            self._tag_aliases = aliases
+        self._ensure_tag_index()
         return [real for n in names for real in self._tag_aliases.get(n.lower(), ())]
+
+    def _ensure_tag_index(self):
+        """Built on first use: lowercase tag -> real spellings, and games per tag."""
+        if self._tag_aliases is None:
+            aliases, counts = {}, Counter()
+            for votes in self._tags:
+                for tag, count in votes.items():
+                    aliases.setdefault(tag.lower(), set()).add(tag)
+                    if count > 0:
+                        counts[tag] += 1
+            self._tag_aliases, self._tag_counts = aliases, counts
+
+    def find_tags(self, query: str, limit: int = 10) -> list:
+        """Real tag names containing `query` (case-insensitive): exact match first, then
+        prefix, then substring; within each, tags on more games first."""
+        q = query.lower().strip()
+        if not q:
+            return []
+        self._ensure_tag_index()
+        hits = [tag for tag in self._tag_counts if q in tag.lower()]
+        hits.sort(key=lambda t: (0 if t.lower() == q else 1 if t.lower().startswith(q) else 2,
+                                 -self._tag_counts[t], t))
+        return [{"tag": t, "n_games": self._tag_counts[t]} for t in hits[:limit]]
 
     def _mmr(self, idx: np.ndarray, score: np.ndarray, k: int,
              seed_of: np.ndarray | None = None, quotas: np.ndarray | None = None) -> list:
@@ -646,7 +665,7 @@ class Engine:
 # ---------------------------------------------------------------------------
 
 def _main():
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")   # game names, and Windows pipes
     parser = argparse.ArgumentParser(description="Try the playnext engine from the terminal.")
     parser.add_argument("--data", type=Path, default=Path("data/games_slim.pkl"))
     parser.add_argument("--like", nargs="+", required=True, help="game names you like")

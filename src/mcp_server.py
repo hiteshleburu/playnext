@@ -7,6 +7,7 @@ Exposes the recommendation engine and web search as tools, so any MCP client
 Tools
   find_games      look up games in the dataset by name (title -> app_id)
   recommend       ranked recommendations from liked games, with filters
+  search_tags     find real tag names by keyword (for the tag filters and boosts)
   web_search      search the web (SearXNG); results are untrusted text
 
 Design notes
@@ -152,6 +153,10 @@ def recommend_tool(
     }
 
 
+def search_tags_tool(engine: Engine, query: str, limit: int = 10) -> dict:
+    return {"query": query, "tags": engine.find_tags(query, limit=_clamp(limit, 1, 25))}
+
+
 def web_search_tool(query: str, max_results: int = 5) -> dict:
     results = web_search(query, max_results=_clamp(max_results, 1, MAX_SEARCH_RESULTS))
     return {"query": query, "untrusted": True, "note": UNTRUSTED_NOTE, "results": results}
@@ -220,6 +225,16 @@ def create_server(engine: Engine, *, allow_adult: bool = False) -> MCPServer:
             )
         except ValueError as error:      # a ToolError message reaches the model; a crash does not
             raise ToolError(str(error)) from error
+
+    @server.tool()
+    def search_tags(
+        query: Annotated[str, Field(description="Theme or word, e.g. 'horror', 'cozy', 'roguelike'")],
+        limit: Annotated[int, Field(description="How many tags to return (1-25)")] = 10,
+    ) -> dict[str, Any]:
+        """Find the real tag names in the dataset that contain a word, with how many games
+        have each. Use it before passing tags_any, exclude_tags or tag_boosts to recommend:
+        those only work with exact tag names. Empty `tags` means no such tag exists."""
+        return search_tags_tool(engine, query, limit)
 
     @server.tool()
     def web_search(

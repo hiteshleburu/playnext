@@ -64,6 +64,11 @@ class LLM:
 
     def chat(self, messages: list, **extra) -> str:
         """Send messages, return the reply text (thinking blocks removed)."""
+        return self.chat_message(messages, **extra)["content"]
+
+    def chat_message(self, messages: list, **extra) -> dict:
+        """Like chat, but returns {"content": str, "tool_calls": list}. Pass
+        tools=[...] (OpenAI function schemas) to let the model ask for tool calls."""
         body = {"model": self.model, "messages": messages,
                 "temperature": self.temperature, **extra}
         request = urllib.request.Request(
@@ -75,7 +80,9 @@ class LLM:
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 data = json.load(response)
-            return strip_thinking(data["choices"][0]["message"].get("content"))
+            message = data["choices"][0]["message"]
+            return {"content": strip_thinking(message.get("content")),
+                    "tool_calls": message.get("tool_calls") or []}
         except urllib.error.HTTPError as error:
             detail = error.read().decode(errors="replace")[:300]
             raise LLMError(f"The model server answered HTTP {error.code}: {detail}") from error
