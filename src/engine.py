@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 import time
 import warnings
 from collections import Counter
@@ -645,6 +646,7 @@ class Engine:
 # ---------------------------------------------------------------------------
 
 def _main():
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="Try the playnext engine from the terminal.")
     parser.add_argument("--data", type=Path, default=Path("data/games_slim.pkl"))
     parser.add_argument("--like", nargs="+", required=True, help="game names you like")

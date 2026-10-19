@@ -335,6 +335,7 @@ async def _main(args) -> None:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="Recommend games using web search + the engine.")
     parser.add_argument("--like", nargs="+", required=True, help="game names you like")
     parser.add_argument("--k", type=int, default=10)
