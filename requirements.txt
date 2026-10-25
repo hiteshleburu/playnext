@@ -1,0 +1,8 @@
+mcp>=2
+fastapi
+uvicorn
+pydantic>=2
+numpy==2.2.4
+pandas==2.2.3
+scipy==1.15.2
+scikit-learn==1.6.1

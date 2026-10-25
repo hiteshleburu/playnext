@@ -1,0 +1,9 @@
+.git
+.env
+.cache
+.pytest_cache
+__pycache__
+tests
+searxng
+data/*
+!data/games_slim.pkl

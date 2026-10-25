@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>playnext</title>
+<style>
+  :root { --bg:#14161a; --card:#1d2026; --line:#2c313a; --text:#e8eaed; --dim:#9aa0a9; --accent:#6ea8fe; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 16px; }
+  h1 { margin: 0 0 4px; font-size: 28px; }
+  .sub { color: var(--dim); margin: 0 0 24px; }
+  textarea { width:100%; min-height:90px; padding:12px; resize:vertical; border:1px solid var(--line);
+             border-radius:10px; background:var(--card); color:var(--text); font:inherit; }
+  textarea:focus { outline:2px solid var(--accent); border-color:transparent; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; }
+  label { color:var(--dim); font-size:14px; }
+  button { padding:10px 20px; border:0; border-radius:8px; background:var(--accent); color:#0b1220;
+           font:inherit; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:wait; }
+  .note { margin-top:16px; padding:10px 12px; border-radius:8px; background:var(--card);
+          border:1px solid var(--line); color:var(--dim); font-size:14px; }
+  .error { color:#ff8a80; border-color:#5b2a2a; }
+  .game { margin-top:12px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+  .game h3 { margin:0; font-size:17px; display:flex; justify-content:space-between; gap:12px; }
+  .game a { color:var(--text); text-decoration:none; }
+  .game a:hover { color:var(--accent); }
+  .price { color:var(--dim); font-weight:400; white-space:nowrap; }
+  .why { color:var(--dim); font-size:14px; margin-top:2px; }
+  .tags { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--dim); }
+  .tag.web { color:var(--accent); border-color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>playnext</h1>
+  <p class="sub">Tell me what you're into. Try: <em>something like Hollow Knight, under $20, no horror</em></p>
+
+  <form id="form">
+    <textarea id="text" maxlength="2000" placeholder="Games like Hades, under $20, no horror..." required></textarea>
+    <div class="row">
+      <label><input type="checkbox" id="web"> use web search</label>
+      <button id="go" type="submit">Recommend</button>
+    </div>
+  </form>
+
+  <div id="out"></div>
+</main>
+
+<script>
+const API = "";   // same origin: FastAPI serves this page
+const form = document.getElementById("form");
+const out = document.getElementById("out");
+const go = document.getElementById("go");
+
+function el(tag, className, text) {
+  const e = document.createElement(tag);
+  if (className) e.className = className;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function note(text, className = "") {
+  out.append(el("div", "note " + className, text));
+}
+
+function showGame(r) {
+  const card = el("div", "game");
+  const title = el("h3");
+  const link = el("a", "", r.name);
+  link.href = `https://store.steampowered.com/app/${r.app_id}`;
+  link.target = "_blank";
+  link.rel = "noopener";
+  title.append(link, el("span", "price", r.price ? `$${r.price.toFixed(2)}` : "Free"));
+  card.append(title);
+  card.append(el("div", "why", r.because_of ? `Because you liked ${r.because_of}` : "Suggested by the web"));
+  const tags = el("div", "tags");
+  if (r.mentions) tags.append(el("span", "tag web", `web x${r.mentions}`));
+  (r.top_tags || []).forEach(t => tags.append(el("span", "tag", t)));
+  card.append(tags);
+  out.append(card);
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  go.disabled = true;
+  go.textContent = "Thinking...";
+  out.replaceChildren();
+  try {
+    const res = await fetch(`${API}/recommend/text`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: document.getElementById("text").value.trim(),
+        use_web: document.getElementById("web").checked,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+      note(detail, "error");
+      return;
+    }
+    const liked = data.interpretation.liked.map(g => g.name).join(", ");
+    note(`Understood: ${liked}` + (Object.keys(data.interpretation.options).length
+      ? ` | ${JSON.stringify(data.interpretation.options)}` : ""));
+    data.recommendations.forEach(showGame);
+    if (!data.recommendations.length) note("Nothing matched. Try loosening the filters.");
+    data.warnings.forEach(w => note(w));
+  } catch (error) {
+    note("Could not reach the API. Is `python src/api.py` running?", "error");
+  } finally {
+    go.disabled = false;
+    go.textContent = "Recommend";
+  }
+});
+</script>
+</body>
+</html>

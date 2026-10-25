@@ -3,57 +3,159 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
 <title>playnext</title>
+<script>
+  try { document.documentElement.dataset.theme = localStorage.getItem("theme") ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); }
+  catch (e) { document.documentElement.dataset.theme = "light"; }
+</script>
 <style>
-  :root { --bg:#14161a; --card:#1d2026; --line:#2c313a; --text:#e8eaed; --dim:#9aa0a9; --accent:#6ea8fe; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, sans-serif; }
-  main { max-width: 720px; margin: 0 auto; padding: 48px 16px; }
-  h1 { margin: 0 0 4px; font-size: 28px; }
-  .sub { color: var(--dim); margin: 0 0 24px; }
-  textarea { width:100%; min-height:90px; padding:12px; resize:vertical; border:1px solid var(--line);
-             border-radius:10px; background:var(--card); color:var(--text); font:inherit; }
-  textarea:focus { outline:2px solid var(--accent); border-color:transparent; }
-  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; }
-  label { color:var(--dim); font-size:14px; }
-  button { padding:10px 20px; border:0; border-radius:8px; background:var(--accent); color:#0b1220;
-           font:inherit; font-weight:600; cursor:pointer; }
-  button:disabled { opacity:.5; cursor:wait; }
-  .note { margin-top:16px; padding:10px 12px; border-radius:8px; background:var(--card);
-          border:1px solid var(--line); color:var(--dim); font-size:14px; }
-  .error { color:#ff8a80; border-color:#5b2a2a; }
-  .game { margin-top:12px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:10px; }
-  .game h3 { margin:0; font-size:17px; display:flex; justify-content:space-between; gap:12px; }
-  .game a { color:var(--text); text-decoration:none; }
-  .game a:hover { color:var(--accent); }
-  .price { color:var(--dim); font-weight:400; white-space:nowrap; }
-  .why { color:var(--dim); font-size:14px; margin-top:2px; }
-  .tags { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
-  .tag { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--dim); }
-  .tag.web { color:var(--accent); border-color:var(--accent); }
+    :root { color-scheme:light; --bg:#f4ead5; --paper:#fffaf0; --ink:#2a2118; --dim:#7a6a55; --line:#d9c9a3;
+          --edge:#2a2118; --shadow:#2a2118; --dots:#dccaa0; --faint:#b3a285; --on-color:#2a2118;
+          --hot:#fde7b0; --note:#ffefc2; --note-error:#ffd9d4; --orange-hover:#f26a1f;
+          --orange:#e8590c; --mustard:#f2a900; --teal:#1f8a8a; --olive:#6f9226; --red:#c8372d; --plum:#8a4f7d;
+          --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Courier New", monospace; }
+  :root[data-theme="dark"] { color-scheme:dark; --bg:#1b1510; --paper:#261e15; --ink:#f3e8d2; --dim:#a89576; --line:#3d3022;
+          --edge:#6e5538; --shadow:#080604; --dots:#2a2117; --faint:#7a6a55; --on-color:#2a2118;
+          --hot:#4a3512; --note:#3a2d12; --note-error:#4a1f1a; --orange-hover:#ff8f52;
+          --orange:#ff7a2e; --mustard:#ffb81c; --teal:#3cc0c0; --olive:#9bc53d; --red:#ff6b5a; --plum:#c97bb8; }
+* { box-sizing: border-box; }
+  body { margin:0; color:var(--ink); font:15px/1.55 var(--mono); background-color:var(--bg);
+         background-image:radial-gradient(var(--dots) 1.2px, transparent 1.2px); background-size:20px 20px; }
+  body::before { content:""; display:block; height:12px;
+                 background:linear-gradient(90deg, var(--red) 0 25%, var(--orange) 25% 50%, var(--mustard) 50% 75%, var(--teal) 75%); }
+  main { max-width: 1000px; margin: 0 auto; padding: 44px 20px 90px; }
+  header { margin-bottom: 28px; position:relative; }
+  h1 { margin:0; font-size:46px; line-height:1; font-weight:700; letter-spacing:-.04em; }
+  h1::after { content:""; display:block; width:150px; height:8px; margin-top:12px;
+              background:linear-gradient(90deg, var(--red) 0 25%, var(--orange) 25% 50%, var(--mustard) 50% 75%, var(--teal) 75%); }
+  .sub { color:var(--dim); margin:12px 0 0; font-size:16px; }
+
+  form { background:var(--paper); border:2px solid var(--edge); border-radius:6px; padding:12px 14px; box-shadow:6px 6px 0 var(--shadow);
+         transition:box-shadow .12s; }
+  form:focus-within { box-shadow:6px 6px 0 var(--orange); }
+  textarea { width:100%; min-height:82px; padding:4px 0; resize:vertical; border:0; background:transparent;
+             color:var(--ink); font:inherit; font-size:17px; }
+  textarea::placeholder { color:var(--faint); }
+  textarea:focus { outline:none; }
+  .bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:2px dashed var(--line); padding-top:12px; }
+  .toggle { color:var(--dim); font-size:13px; display:flex; align-items:center; gap:8px; }
+  .toggle input { accent-color:var(--orange); width:16px; height:16px; }
+  button { padding:9px 20px; border:2px solid var(--edge); border-radius:6px; background:var(--orange); color:#fff;
+           font:inherit; font-size:14px; font-weight:700; cursor:pointer; box-shadow:3px 3px 0 var(--shadow);
+           transition:transform .06s, box-shadow .06s, background .1s; }
+  button:hover { transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--shadow); background:var(--orange-hover); }
+  button:active { transform:translate(3px,3px); box-shadow:0 0 0 var(--shadow); }
+  button:disabled { opacity:.6; cursor:wait; transform:none; box-shadow:3px 3px 0 var(--shadow); }
+  .examples { margin-top:16px; display:flex; flex-wrap:wrap; gap:8px; }
+  .example { padding:4px 12px; border:2px solid var(--edge); border-radius:999px; background:var(--paper); color:var(--ink);
+             font-size:12.5px; font-weight:400; box-shadow:2px 2px 0 var(--shadow); }
+  .example:hover { background:var(--mustard); color:var(--on-color); transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--shadow); }
+
+  #status { margin:22px 0 4px; color:var(--orange); min-height:24px; font-weight:700; }
+  #status:not(:empty)::before { content:"> "; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:28px 0 0; align-items:center; }
+  .chips .label { color:var(--dim); font-size:12px; margin-right:2px; text-transform:uppercase; letter-spacing:.08em; }
+  .chip { --c:var(--teal); display:inline-flex; align-items:center; gap:2px; padding:3px 5px 3px 11px; font-size:13px; font-weight:700;
+          color:var(--ink); background:color-mix(in srgb, var(--c) 24%, var(--paper)); border:2px solid var(--c); border-radius:999px; }
+  .chip.nox { padding-right:11px; }
+  .chip button { padding:0 6px; border:0; background:transparent; color:var(--ink); font-size:17px; line-height:1; opacity:.6; box-shadow:none; border-radius:0; }
+  .chip button:hover { background:transparent; opacity:1; transform:none; box-shadow:none; }
+  .c-like { --c:var(--plum); } .c-num { --c:var(--olive); } .c-no { --c:var(--red); }
+  .c-need { --c:var(--teal); } .c-boost { --c:var(--mustard); } .c-meta { --c:var(--dim); }
+
+  .head { display:flex; align-items:baseline; gap:12px; margin:30px 0 0; padding-bottom:8px; border-bottom:3px solid var(--edge); }
+  .head h2 { margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em; }
+  .head span { color:var(--dim); font-size:13px; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(285px, 1fr)); gap:24px; margin-top:20px; }
+  .card { background:var(--paper); border:2px solid var(--edge); border-radius:6px; display:flex; flex-direction:column; overflow:hidden;
+          box-shadow:5px 5px 0 var(--shadow); transition:transform .1s, box-shadow .1s; }
+  .card:hover { transform:translate(-2px,-2px); box-shadow:8px 8px 0 var(--orange); }
+  .art-wrap { position:relative; aspect-ratio:460/215; overflow:hidden; border-bottom:2px solid var(--edge); background:var(--line); }
+  .art { display:block; width:100%; height:100%; object-fit:cover; }
+  .badge { position:absolute; top:8px; z-index:1; font-size:12px; font-weight:700; line-height:1; padding:5px 8px;
+           border:2px solid var(--edge); border-radius:4px; }
+  .badge.price { right:8px; background:var(--mustard); color:var(--on-color); }
+  .badge.free { right:8px; background:var(--olive); color:#fff; }
+  .badge.web { left:8px; background:var(--teal); color:#fff; }
+  .body { padding:12px 14px 14px; display:flex; flex-direction:column; gap:9px; flex:1; }
+  .name { font-size:17px; font-weight:700; line-height:1.25; color:var(--ink); text-decoration:none; letter-spacing:-.01em; }
+  .name:hover { color:var(--orange); }
+  .why { color:var(--dim); font-size:13px; } .why b { color:var(--red); }
+  .tags { display:flex; flex-wrap:wrap; gap:6px; }
+  .tag { font-size:11.5px; padding:1px 9px; border:1.5px solid var(--line); border-radius:999px; color:var(--dim); background:var(--bg); }
+  .tag:first-child { background:var(--hot); border-color:var(--mustard); color:var(--ink); }
+  .more { margin-top:auto; align-self:flex-start; background:var(--paper); color:var(--ink); font-size:12px; font-weight:700;
+          padding:5px 11px; box-shadow:2px 2px 0 var(--shadow); border-radius:5px; }
+  .more:hover { background:var(--mustard); color:var(--on-color); transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--shadow); }
+
+  .skeleton { height:300px; border:2px dashed var(--edge); border-radius:6px; background:var(--paper); animation:pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity:.35; } }
+
+  .note { margin-top:14px; padding:9px 14px; background:var(--note); border:2px solid var(--edge); border-radius:6px; color:var(--ink); font-size:13px; }
+  .note.error { background:var(--note-error); }
+  details { margin-top:28px; background:var(--paper); border:2px solid var(--edge); border-radius:6px; padding:11px 16px; box-shadow:4px 4px 0 var(--shadow); }
+  summary { cursor:pointer; font-size:13px; font-weight:700; }
+  summary:hover { color:var(--orange); }
+  details ul { margin:10px 0 2px; padding-left:18px; color:var(--dim); font-size:13px; }
+  code { color:var(--ink); font-size:12px; }
+  @media (max-width:520px) { h1 { font-size:36px; } }
+  #theme { position:absolute; top:0; right:0; padding:5px 11px; font-size:12px; font-weight:700; background:var(--paper);
+           color:var(--ink); box-shadow:2px 2px 0 var(--shadow); border-radius:5px; }
+  #theme:hover { background:var(--mustard); color:var(--on-color); box-shadow:3px 3px 0 var(--shadow); }
+  #theme:active { box-shadow:0 0 0 var(--shadow); }
 </style>
 </head>
 <body>
 <main>
-  <h1>playnext</h1>
-  <p class="sub">Tell me what you're into. Try: <em>something like Hollow Knight, under $20, no horror</em></p>
+  <header>
+    <button type="button" id="theme" aria-label="Switch theme"></button>
+    <h1>playnext</h1>
+    <p class="sub">tell me what you're into. i'll find what to play next.</p>
+  </header>
 
   <form id="form">
-    <textarea id="text" maxlength="2000" placeholder="Games like Hades, under $20, no horror..." required></textarea>
-    <div class="row">
-      <label><input type="checkbox" id="web"> use web search</label>
+    <textarea id="text" maxlength="2000" required
+      placeholder="Something like Hollow Knight, under $20, no horror..."></textarea>
+    <div class="bar">
+      <label class="toggle"><input type="checkbox" id="web"> use web search</label>
       <button id="go" type="submit">Recommend</button>
     </div>
   </form>
+  <div class="examples" id="examples"></div>
 
+  <div id="status" aria-live="polite"></div>
   <div id="out"></div>
 </main>
 
 <script>
-const API = "http://127.0.0.1:8001";
-const form = document.getElementById("form");
-const out = document.getElementById("out");
-const go = document.getElementById("go");
+// Same origin while FastAPI serves this page. For GitHub Pages, set this to the backend's full URL.
+const API = "";
+const EXAMPLES = [
+  "something like Hollow Knight, under $20, no horror",
+  "cozy co-op games like Stardew Valley",
+  "I loved Hades and Dead Cells, windows only",
+  "games like Portal 2, nothing before 2015",
+];
+const STEPS = ["Understanding your request...", "Searching the web...", "Reading the results...", "Ranking games..."];
+
+const $ = (id) => document.getElementById(id);
+
+function showTheme() { $("theme").textContent = document.documentElement.dataset.theme === "dark" ? "☀ light" : "☾ dark"; }
+$("theme").addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("theme", next); } catch (e) { /* storage blocked: the choice just won't persist */ }
+  showTheme();
+});
+showTheme();
+const form = $("form"), out = $("out"), go = $("go"), statusLine = $("status");
+let state = null;            // what the last answer was based on, so chips can edit it
+let timer = null;
 
 function el(tag, className, text) {
   const e = document.createElement(tag);
@@ -62,59 +164,168 @@ function el(tag, className, text) {
   return e;
 }
 
-function note(text, className = "") {
-  out.append(el("div", "note " + className, text));
-}
+function note(text, className = "") { out.append(el("div", "note " + className, text)); }
 
-function showGame(r) {
-  const card = el("div", "game");
-  const title = el("h3");
-  const link = el("a", "", r.name);
-  link.href = `https://store.steampowered.com/app/${r.app_id}`;
-  link.target = "_blank";
-  link.rel = "noopener";
-  title.append(link, el("span", "price", r.price ? `$${r.price.toFixed(2)}` : "Free"));
-  card.append(title);
-  card.append(el("div", "why", r.because_of ? `Because you liked ${r.because_of}` : "Suggested by the web"));
-  const tags = el("div", "tags");
-  if (r.mentions) tags.append(el("span", "tag web", `web x${r.mentions}`));
-  (r.top_tags || []).forEach(t => tags.append(el("span", "tag", t)));
-  card.append(tags);
-  out.append(card);
-}
-
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  go.disabled = true;
-  go.textContent = "Thinking...";
-  out.replaceChildren();
-  try {
-    const res = await fetch(`${API}/recommend/text`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: document.getElementById("text").value.trim(),
-        use_web: document.getElementById("web").checked,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      const detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
-      note(detail, "error");
-      return;
-    }
-    const liked = data.interpretation.liked.map(g => g.name).join(", ");
-    note(`Understood: ${liked}` + (Object.keys(data.interpretation.options).length
-      ? ` | ${JSON.stringify(data.interpretation.options)}` : ""));
-    data.recommendations.forEach(showGame);
-    if (!data.recommendations.length) note("Nothing matched. Try loosening the filters.");
-    data.warnings.forEach(w => note(w));
-  } catch (error) {
-    note("Could not reach the API. Is `python src/api.py` running?", "error");
-  } finally {
-    go.disabled = false;
-    go.textContent = "Recommend";
+async function post(path, body) {
+  const res = await fetch(API + path, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const d = data.detail;
+    throw new Error(typeof d === "string" ? d : d ? JSON.stringify(d) : `Request failed (${res.status})`);
   }
+  return data;
+}
+
+function loading(on) {
+  go.disabled = on;
+  go.textContent = on ? "Thinking..." : "Recommend";
+  clearInterval(timer);
+  if (!on) { statusLine.textContent = ""; return; }
+  let i = 0;
+  statusLine.textContent = STEPS[0];
+  timer = setInterval(() => { i = Math.min(i + 1, STEPS.length - 1); statusLine.textContent = STEPS[i]; }, 2500);
+  out.replaceChildren();
+  const grid = el("div", "grid");
+  for (let n = 0; n < 6; n++) grid.append(el("div", "skeleton"));
+  out.append(grid);
+}
+
+// ---- chips: what the AI understood, each one removable ---------------------------------
+function chipList() {
+  const o = state.options, chips = [];
+  const drop = (fn) => () => { fn(); rerun(); };
+  const without = (key, value) => drop(() => o[key] = o[key].filter((x) => x !== value));
+  const nice = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  state.seeds.forEach((s, i) => chips.push({ cls: "c-like", label: "♥ " + s.name,
+    remove: state.seeds.length > 1 ? drop(() => state.seeds.splice(i, 1)) : null }));
+  if (o.max_price != null) chips.push({ cls: "c-num", label: `Under $${o.max_price}`, remove: drop(() => delete o.max_price) });
+  if (o.max_playtime_hours != null) chips.push({ cls: "c-num", label: `Under ${o.max_playtime_hours}h`, remove: drop(() => delete o.max_playtime_hours) });
+  if (o.min_release_year != null) chips.push({ cls: "c-num", label: `Since ${o.min_release_year}`, remove: drop(() => delete o.min_release_year) });
+  (o.exclude_tags || []).forEach((t) => chips.push({ cls: "c-no", label: "No " + t, remove: without("exclude_tags", t) }));
+  (o.tags_any || []).forEach((t) => chips.push({ cls: "c-need", label: "Must be " + t, remove: without("tags_any", t) }));
+  (o.categories_any || []).forEach((c) => chips.push({ cls: "c-need", label: c, remove: without("categories_any", c) }));
+  (o.platforms || []).forEach((p) => chips.push({ cls: "c-need", label: nice(p), remove: without("platforms", p) }));
+  Object.keys(o.tag_boosts || {}).forEach((t) => chips.push({ cls: "c-boost", label: "More " + t, remove: drop(() => delete o.tag_boosts[t]) }));
+  if ((o.owned_app_ids || []).length) chips.push({ cls: "c-meta", label: `Skipping ${o.owned_app_ids.length} played`, remove: null });
+  return chips;
+}
+
+function showChips() {
+  const bar = el("div", "chips");
+  bar.append(el("span", "label", "I understood"));
+  chipList().forEach(({ cls, label, remove }) => {
+    const chip = el("span", `chip ${cls}` + (remove ? "" : " nox"));
+    chip.append(el("span", "", label));
+    if (remove) {
+      const x = el("button", "", "×");
+      x.type = "button"; x.title = "Remove and re-run";
+      x.addEventListener("click", remove);
+      chip.append(x);
+    }
+    bar.append(chip);
+  });
+  out.append(bar);
+}
+
+// ---- results ---------------------------------------------------------------------------
+function showGame(r) {
+  const card = el("div", "card");
+  const wrap = el("div", "art-wrap");
+  const art = el("img", "art");
+  art.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${r.app_id}/header.jpg`;
+  art.alt = ""; art.loading = "lazy";
+  art.addEventListener("error", () => art.remove());
+  wrap.append(art, el("span", "badge " + (r.price ? "price" : "free"), r.price ? `$${r.price.toFixed(2)}` : "Free"));
+  if (r.mentions) wrap.append(el("span", "badge web", `web ×${r.mentions}`));
+  const body = el("div", "body");
+  const name = el("a", "name", r.name);
+  name.href = `https://store.steampowered.com/app/${r.app_id}`;
+  name.target = "_blank"; name.rel = "noopener";
+  const why = el("div", "why");
+  if (r.because_of) why.append(el("b", "", "♥ "), document.createTextNode(`Because you liked ${r.because_of}`));
+  else why.textContent = "Suggested by the web";
+  const tags = el("div", "tags");
+  (r.top_tags || []).slice(0, 5).forEach((t) => tags.append(el("span", "tag", t)));
+  const more = el("button", "more", "+ More like this");
+  more.type = "button";
+  more.addEventListener("click", () => {
+    if (!state.seeds.some((s) => s.app_id === r.app_id)) state.seeds.push({ app_id: r.app_id, name: r.name, weight: 1 });
+    rerun();
+  });
+  body.append(name, why, tags, more);
+  card.append(wrap, body);
+  return card;
+}
+
+function showHow(data) {
+  const d = el("details");
+  d.append(el("summary", "", "How I got this"));
+  const list = el("ul");
+  if (data.web) {
+    list.append(el("li", "", `Web: read ${data.web.results} results, found ${data.web.titles_found} titles, ` +
+      `${data.web.verified} exist in the dataset.`));
+    if (data.web.dropped.length) list.append(el("li", "", "Not in the dataset: " + data.web.dropped.slice(0, 12).join(", ")));
+  }
+  (data.trace || []).forEach((s) => {
+    const li = el("li");
+    li.append(el("code", "", `${s.agent}: ${s.tool}(${JSON.stringify(s.arguments)})`),
+              document.createTextNode(s.error ? " → " + s.error : " → ok"));
+    list.append(li);
+  });
+  if (!list.children.length) list.append(el("li", "", "Engine only: no web search, no agent tool calls."));
+  d.append(list);
+  return d;
+}
+
+function render(data) {
+  out.replaceChildren();
+  showChips();
+  const head = el("div", "head");
+  head.append(el("h2", "", "Your next games"), el("span", "", `${data.recommendations.length} picks`));
+  out.append(head);
+  const grid = el("div", "grid");
+  data.recommendations.forEach((r) => grid.append(showGame(r)));
+  out.append(grid);
+  if (!data.recommendations.length) note("Nothing matched. Try removing a filter.");
+  (data.warnings || []).forEach((w) => note(w));
+  out.append(showHow(data));
+}
+
+// ---- requests --------------------------------------------------------------------------
+async function run(request) {
+  loading(true);
+  try {
+    render(await request());
+  } catch (error) {
+    out.replaceChildren();
+    note(error instanceof TypeError ? "Could not reach the API. Is it running?" : error.message, "error");
+  } finally {
+    loading(false);
+  }
+}
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const use_web = $("web").checked;
+  run(async () => {
+    const data = await post("/recommend/text", { text: $("text").value.trim(), use_web });
+    state = { use_web, k: data.interpretation.k, options: data.interpretation.options,
+              seeds: data.seeds.map(({ app_id, name, weight }) => ({ app_id, name, weight })) };
+    return data;
+  });
+});
+
+function rerun() {
+  const { allow_vr_only, ...options } = state.options;
+  run(() => post("/recommend", { liked: state.seeds, k: state.k, use_web: state.use_web, ...options }));
+}
+
+EXAMPLES.forEach((text) => {
+  const b = el("button", "example", text);
+  b.type = "button";
+  b.addEventListener("click", () => { $("text").value = text; $("text").focus(); });
+  $("examples").append(b);
 });
 </script>
 </body>

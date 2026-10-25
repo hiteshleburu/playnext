@@ -7,6 +7,7 @@ POST /recommend       structured input: liked games ({app_id, name, weight}) plu
 POST /recommend/text  free text, understood by the Interpreter agent
 GET  /games/search    title search for a dropdown
 GET  /health
+GET  /             the web page (web/index.html)
 
 One MCP connection is opened at startup and shared by all requests, so the engine is built
 once. The LLM comes from .env (LLM_PROVIDER, OPENROUTER_API_KEY, ...). Set MCP_SERVER_URL to use
@@ -22,7 +23,7 @@ from typing import Literal, Optional
 import uvicorn
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -89,6 +90,11 @@ class RecommendIn(BaseModel):
 class TextIn(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
     use_web: bool = True
+
+
+@app.get("/", include_in_schema=False)
+async def home():
+    return FileResponse(Path(__file__).resolve().parent.parent / "web" / "index.html")
 
 
 @app.get("/health")

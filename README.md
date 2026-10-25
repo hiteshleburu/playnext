@@ -1,3 +1,9 @@
+   ---
+   title: playnext
+   emoji: 🎮
+   sdk: docker
+   app_port: 7860
+   ---
 # playnext
 
 Agentic Steam game recommender: TF-IDF engine + MCP server + multi-agent reranking + FastAPI.

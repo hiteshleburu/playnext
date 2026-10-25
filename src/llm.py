@@ -16,7 +16,7 @@ from pathlib import Path
 
 PROVIDERS = {
     "ollama": {"base_url": "http://localhost:11434/v1", "model": "llama3.1:8b", "api_key": "ollama"},
-    "openrouter": {"base_url": "https://openrouter.ai/api/v1", "model": "meta-llama/llama-3.1-8b-instruct",
+    "openrouter": {"base_url": "https://openrouter.ai/api/v1", "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
                    "model_env": "OPENROUTER_MODEL", "key_env": "OPENROUTER_API_KEY"},
 }
 
